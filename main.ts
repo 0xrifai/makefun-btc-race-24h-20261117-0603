@@ -44,7 +44,9 @@
 //     up to 100% of equity, as the caps allow).
 //   * Exit — holding, and any one of: the close is 2% above the entry
 //     close (take profit), 1.2% below it (stop loss), or 240 bars have
-//     passed since entry (time stop): sell the whole position.
+//     passed since entry (time stop): sell the whole position. Once the
+//     close has been 1% above entry, the stop rises to breakeven, so a
+//     reversal after a real recovery exits flat instead of at the stop.
 //   * While warming up (hello.warmup_bars batches, if the harness sends
 //     any) send no orders: those are rejected as warmup anyway.
 //   * One order per reply at most; max_slippage_bps 300, wide enough for
@@ -71,6 +73,9 @@ const DIP_BPS = 110;
 // Exit: take profit / stop loss vs the entry close, in basis points.
 const TAKE_BPS = 200;
 const STOP_BPS = 120;
+// Once the close is this far above entry, raise the stop to breakeven:
+// a trade that has shown a real recovery no longer risks a full stop-out.
+const BREAKEVEN_BPS = 100;
 // Exit: give up after this many bars held.
 const MAX_HOLD_BARS = 240;
 // Do not open a new position this close to the end of the window: an
@@ -91,9 +96,12 @@ interface BotMemory {
   entryClose: bigint | null;
   // Bars held since entry (counts batches answered while holding).
   heldBars: number;
+  // True once the close has been BREAKEVEN_BPS above entry: the stop is
+  // then breakeven instead of STOP_BPS below entry.
+  protected: boolean;
 }
 
-const memory: BotMemory = { closes: [], entryClose: null, heldBars: 0 };
+const memory: BotMemory = { closes: [], entryClose: null, heldBars: 0, protected: false };
 
 function trailingHigh(): bigint | null {
   let high: bigint | null = null;
@@ -121,11 +129,18 @@ function onBatch(state: BarsState, _batch: Batch): OrderInput[] {
     memory.heldBars += 1;
     const entry = memory.entryClose;
     const tookProfit = close * BPS >= entry * BigInt(BPS + BigInt(TAKE_BPS));
-    const stoppedOut = close * BPS <= entry * BigInt(BPS - BigInt(STOP_BPS));
+    // Once the trade has recovered BREAKEVEN_BPS above entry, the stop
+    // rises to breakeven: a reversal after a real recovery exits flat
+    // instead of at the full stop loss.
+    if (!memory.protected && close * BPS >= entry * BigInt(BPS + BigInt(BREAKEVEN_BPS))) memory.protected = true;
+    const stoppedOut = memory.protected
+      ? close <= entry
+      : close * BPS <= entry * BigInt(BPS - BigInt(STOP_BPS));
     const timedOut = memory.heldBars >= MAX_HOLD_BARS;
     if (tookProfit || stoppedOut || timedOut) {
       memory.entryClose = null;
       memory.heldBars = 0;
+      memory.protected = false;
       return [
         {
           side: 'sell',
@@ -152,6 +167,7 @@ function onBatch(state: BarsState, _batch: Batch): OrderInput[] {
       if (dipped && state.cash > 0n) {
         memory.entryClose = close;
         memory.heldBars = 0;
+        memory.protected = false;
         return [
           {
             side: 'buy',
