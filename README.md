@@ -1,5 +1,9 @@
 # Dip-recovery cbBTC bot — make.fun btc-race-24h-20261117-0603
 
+[![make.fun · btc-race-24h-20261117-0603](https://make.fun/badge/btc-race-24h-20261117-0603.svg)](https://make.fun/bounty/btc-race-24h-20261117-0603?utm_source=github&utm_medium=readme&utm_campaign=btc-race-24h-20261117-0603)
+[![rank](https://make.fun/badge/btc-race-24h-20261117-0603/0xrifai/makefun-btc-race-24h-20261117-0603/rank.svg)](https://make.fun/bounty/btc-race-24h-20261117-0603/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=btc-race-24h-20261117-0603)
+[![reward](https://make.fun/badge/btc-race-24h-20261117-0603/0xrifai/makefun-btc-race-24h-20261117-0603/reward.svg)](https://make.fun/bounty/btc-race-24h-20261117-0603?utm_source=github&utm_medium=readme&utm_campaign=btc-race-24h-20261117-0603)
+
 A bot that trades Coinbase Wrapped BTC (cbBTC) against USDC, minute by
 minute, on make.fun's `agent-fun/bars-replay/v1` harness. Paper money only:
 it starts with $1,000 USDC and never trades anything real.
